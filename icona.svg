@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="#3461f0"/>
+  <!-- foglio -->
+  <path d="M70 44h80l40 40v118a10 10 0 0 1-10 10H70a10 10 0 0 1-10-10V54a10 10 0 0 1 10-10z" fill="#000" opacity=".18" transform="translate(4 6)"/>
+  <path d="M70 44h80l40 40v118a10 10 0 0 1-10 10H70a10 10 0 0 1-10-10V54a10 10 0 0 1 10-10z" fill="#fff"/>
+  <path d="M150 44v30a10 10 0 0 0 10 10h30z" fill="#c9d6ff"/>
+  <!-- righe di testo -->
+  <rect x="80" y="70" width="52" height="8" rx="4" fill="#d5ddf2"/>
+  <rect x="80" y="94" width="88" height="8" rx="4" fill="#d5ddf2"/>
+  <rect x="80" y="114" width="72" height="8" rx="4" fill="#d5ddf2"/>
+  <!-- firma -->
+  <path d="M78 176c10-22 18-36 24-30s-14 34-4 34 18-28 26-26-6 22 4 22 14-16 22-14 4 12 14 10"
+        fill="none" stroke="#2346c9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="78" y="192" width="96" height="4" rx="2" fill="#c9d6ff"/>
+  <!-- penna -->
+  <g transform="rotate(45 196 150)">
+    <rect x="186" y="100" width="20" height="56" rx="4" fill="#ffc145"/>
+    <rect x="186" y="100" width="20" height="12" rx="4" fill="#ff7a59"/>
+    <path d="M186 156h20l-10 24z" fill="#f6e2c0"/>
+    <path d="M192.5 172h7l-3.5 8z" fill="#33334d"/>
+  </g>
+</svg>

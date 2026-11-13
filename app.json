@@ -1,0 +1,19 @@
+{
+  "nome": "Syglami-PDF",
+  "descrizione": "Firma i tuoi PDF trascinando la tua firma sulla pagina.",
+  "versione": "1.1.0",
+  "algoritmo_firma": {
+    "nome": "Mano Hershey",
+    "versione": "3.0.0",
+    "descrizione": "Scheletri Hershey a linea singola e simulazione della mano: inclinazione, ritmo, pressione, tremolio."
+  },
+  "autore": {
+    "nome": "Giuseppe Cappadonna",
+    "github": "https://github.com/giuseppeCappadonna/Syglami-PDF"
+  },
+  "licenza": {
+    "nome": "GNU AGPL-3.0",
+    "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+  },
+  "anno": 2026
+}

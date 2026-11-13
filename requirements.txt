@@ -1,0 +1,4 @@
+pymupdf
+potracer
+Hershey-Fonts
+# PyQt6 e numpy: pacchetti di sistema (python3-pyqt6, python3-numpy)
