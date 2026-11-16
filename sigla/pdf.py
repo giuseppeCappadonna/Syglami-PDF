@@ -45,9 +45,10 @@ def stampa_firma(page, rect, path, caption, w):
     page.show_pdf_page(rect * page.derotation_matrix, stamp_doc(path, caption, w), 0, rotate=page.rotation)
 
 
-def write_signed(doc, placed, target, password=None):
+def write_signed(doc, placed, target, password=None, scan=False):
     """Applica le firme a una copia del documento e la scrive su `target` in modo atomico.
-    I PDF protetti restano protetti: si riparte dal file originale con la sua password."""
+    I PDF protetti restano protetti: si riparte dal file originale con la sua password.
+    `scan`: le pagine escono come immagini, con l'aspetto di un foglio stampato e scansionato."""
     if password is not None:
         out = pymupdf.open(doc.name)
         if not out.authenticate(password):
@@ -56,6 +57,9 @@ def write_signed(doc, placed, target, password=None):
         out = pymupdf.open("pdf", doc.tobytes())  # copia: il documento aperto resta intatto se qualcosa fallisce
     for pno, rect, path, caption, w in placed:
         stampa_firma(out[pno], rect, path, caption, w)
+    if scan:
+        from sigla.scansione import scansiona  # numpy si carica solo se serve
+        scansiona(out)
     fd, tmp = tempfile.mkstemp(suffix=".pdf", dir=os.path.dirname(os.path.abspath(target)))
     os.close(fd)
     try:
@@ -153,7 +157,7 @@ def output_path(src, suffix=SUFFISSO):
     return dst
 
 
-def sign_file(src, dst, path, caption, w, mode="auto", ref=None):
+def sign_file(src, dst, path, caption, w, mode="auto", ref=None, scan=False):
     """Firma `src` e scrive `dst`. mode: auto | ultima | come (usa i posizionamenti `ref`)."""
     with pymupdf.open(src) as doc:
         if not doc.is_pdf or not len(doc):
@@ -166,5 +170,5 @@ def sign_file(src, dst, path, caption, w, mode="auto", ref=None):
                 raise ValueError("il documento ha meno pagine del riferimento")
         else:
             placed, where = auto_placements(doc, path, caption, w, mode)
-        write_signed(doc, placed, dst)
+        write_signed(doc, placed, dst, scan=scan)
     return where

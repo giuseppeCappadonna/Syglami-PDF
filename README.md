@@ -45,6 +45,7 @@ The interface is in Italian.
 </p>
 
 **Several documents**
+- **Scan effect** (optional checkbox): the saved PDF looks printed, hand-signed and scanned — greyscale pages, slightly skewed, scanner contrast, grain, a few specks and faint vertical streaks in the margins. The flaws are random, different at every save, and never cover the content. Text is no longer selectable.
 - **Sign several PDFs at once**: automatic position, bottom of the last page, or the same as in the open document; creates `name_firmato.pdf` or overwrites.
 
 **Settings**
@@ -57,7 +58,7 @@ The interface is in Italian.
 - Password-protected PDFs stay protected after signing.
 - Safe saving: the file is written aside and replaced only once writing has succeeded.
 - Remembers place, options, signature width and window position.
-- **Update check**: at startup the app reads the version number published on GitHub and tells you when a newer one is available, with a button that opens the download page. It sends no data and can be turned off in the settings.
+- **Updates**: at startup the app reads the latest release number from GitHub. If you installed the `.deb` package, an **Update** button downloads the new package, checks it (size, SHA-256 published by GitHub, package name and version) and installs it after you enter your password; then the app offers to restart. If you run it from the source folder, the button opens the download page instead, so your folder is never touched. No data is sent, and the check can be turned off in the settings.
 
 <p align="center">
   <img src="docs/screenshot-home.png" alt="Start screen" width="640">

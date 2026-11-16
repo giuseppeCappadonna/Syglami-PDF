@@ -3,14 +3,14 @@ import os
 import threading
 
 import pymupdf
-from PyQt6.QtCore import pyqtSignal, QByteArray, QDate, QPointF, QSize, Qt, QUrl
+from PyQt6.QtCore import pyqtSignal, QByteArray, QDate, QPointF, QProcess, QSize, Qt, QUrl
 from PyQt6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QDateEdit, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel,
-                             QLineEdit, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy, QSpinBox,
+                             QLineEdit, QMainWindow, QMenu, QMessageBox, QProgressDialog, QPushButton, QSizePolicy, QSpinBox,
                              QStackedWidget, QToolBar, QToolButton, QVBoxLayout, QWidget)
 
-from sigla.aggiornamenti import nuova_versione, pagina_download
-from sigla.config import APP_DIR, APP_NAME, copy_suffix, default_firma, fmt_data, import_firma, load_config, save_config
+from sigla.aggiornamenti import da_pacchetto, installa, nuova_versione, scarica
+from sigla.config import APP_DIR, APP_ID, APP_NAME, copy_suffix, default_firma, fmt_data, import_firma, load_config, save_config
 from sigla.pdf import auto_placements, find_sign_spots, output_path, placement_at, sigla_placements, write_signed
 from sigla.ui.dialoghi import (AboutDialog, BatchDialog, CreatorDialog, DrawDialog, MyFirmeDialog, NewFirmaDialog,
                                SettingsDialog, SiglaDialog)
@@ -19,12 +19,18 @@ from sigla.ui.tema import ACCENT, app_icon_pixmap, icon, stamp_cursor
 from sigla.ui.widget import Coach, FirmeList, ThumbList, Toast, Welcome
 
 class MainWindow(QMainWindow):
-    update_found = pyqtSignal(str)  # emesso dal thread del controllo aggiornamenti
+    # emessi dai thread degli aggiornamenti: solo il thread principale tocca la finestra
+    update_found = pyqtSignal(dict)
+    update_progress = pyqtSignal(int)
+    update_stage = pyqtSignal(str)
+    update_done = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.new_version = None  # versione più nuova trovata su GitHub (la mostra anche la finestra Info)
+        self.release = None
         self.update_found.connect(self.show_update)
+        self.update_done.connect(self.update_finished)
         self.cfg = load_config()
         self.doc = None
         self.path = None
@@ -181,6 +187,16 @@ class MainWindow(QMainWindow):
         self.anteprima.setWordWrap(True)
         self.anteprima.setObjectName("hint")
         ol.addWidget(self.anteprima)
+        t = QLabel("Al salvataggio")
+        t.setObjectName("subsection")
+        ol.addWidget(t)
+        self.chk_scan = QCheckBox("Effetto scansione")
+        self.chk_scan.setToolTip("Il PDF salvato sembra stampato, firmato a mano e scansionato:\n"
+                                 "pagine in grigio, appena storte, con piccoli difetti casuali.\n"
+                                 "Il testo non sarà più selezionabile.")
+        self.chk_scan.setChecked(self.cfg.get("scansione", False))
+        self.chk_scan.toggled.connect(self.scan_changed)
+        ol.addWidget(self.chk_scan)
         self.chk_luogo.toggled.connect(self.options_changed)
         self.chk_data.toggled.connect(self.options_changed)
         self.luogo.textChanged.connect(self.options_changed)
@@ -516,6 +532,10 @@ class MainWindow(QMainWindow):
             parts.append(fmt_data(self.data.date().toPyDate(), self.cfg.get("formato_data", "num")))
         return ", ".join(parts)
 
+    def scan_changed(self, on):
+        self.cfg["scansione"] = on
+        save_config(self.cfg)
+
     def options_changed(self):
         self.luogo.setEnabled(self.chk_luogo.isChecked())
         self.data.setEnabled(self.chk_data.isChecked())
@@ -678,7 +698,7 @@ class MainWindow(QMainWindow):
     def write(self, placed, target):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            write_signed(self.doc, placed, target, self.password)
+            write_signed(self.doc, placed, target, self.password, self.cfg.get("scansione", False))
         except Exception as ex:
             QApplication.restoreOverrideCursor()
             QMessageBox.critical(self, "Errore", f"Salvataggio fallito, il file originale non è stato modificato:\n{ex}")
@@ -709,21 +729,79 @@ class MainWindow(QMainWindow):
     def about(self):
         AboutDialog(self).exec()
 
+    def emit_safe(self, signal, *args):
+        try:
+            signal.emit(*args)
+        except RuntimeError:  # finestra già chiusa
+            pass
+
     def check_updates(self):
         """Chiede a GitHub se c'è una versione più nuova, in un thread: l'avvio non aspetta la rete."""
         def work():
-            v = nuova_versione()
-            if v:
-                try:
-                    self.update_found.emit(v)
-                except RuntimeError:  # finestra già chiusa
-                    pass
+            rel = nuova_versione()
+            if rel:
+                self.emit_safe(self.update_found, rel)
         threading.Thread(target=work, daemon=True).start()
 
-    def show_update(self, v):
-        self.new_version = v
-        self.toast.show_msg(f"È disponibile {APP_NAME} {v}", "Scarica",
-                            lambda: QDesktopServices.openUrl(QUrl(pagina_download())))
+    def show_update(self, rel):
+        self.release, self.new_version = rel, rel["versione"]
+        text = f"È disponibile {APP_NAME} {rel['versione']}"
+        if rel["deb"] and da_pacchetto():
+            self.toast.show_msg(text, "Aggiorna", self.install_update)
+        else:  # avviata dai sorgenti, o release senza pacchetto per questo computer: si scarica a mano
+            self.toast.show_msg(text, "Scarica", lambda: QDesktopServices.openUrl(QUrl(rel["pagina"])))
+
+    def install_update(self):
+        """Scarica e installa il pacchetto della nuova versione in un thread, con una finestra di avanzamento."""
+        rel = self.release
+        dlg = QProgressDialog(f"Scarico {APP_NAME} {rel['versione']}…", "Annulla", 0, rel["deb"]["size"], self)
+        dlg.setWindowTitle("Aggiornamento")
+        dlg.setMinimumDuration(0)
+        dlg.setAutoReset(False)
+        dlg.setAutoClose(False)
+        self.update_progress.connect(dlg.setValue)
+        self.update_stage.connect(dlg.setLabelText)
+        self.update_dlg = dlg
+        stop = threading.Event()
+        dlg.canceled.connect(stop.set)
+        dlg.show()
+
+        def work():
+            try:
+                path = scarica(rel["deb"], rel["versione"],
+                               lambda n: self.emit_safe(self.update_progress, n) or not stop.is_set())
+            except InterruptedError:
+                return self.emit_safe(self.update_done, "annullato")
+            except (OSError, ValueError) as ex:
+                return self.emit_safe(self.update_done, f"download non riuscito: {ex}")
+            try:
+                self.emit_safe(self.update_stage, "Installo l'aggiornamento: conferma con la password del computer.")
+                self.emit_safe(self.update_done, installa(path))
+            finally:
+                os.remove(path)
+        threading.Thread(target=work, daemon=True).start()
+
+    def update_finished(self, err):
+        self.update_dlg.close()
+        self.update_dlg.deleteLater()  # scollega anche i segnali di avanzamento
+        if err == "annullato":
+            return
+        if err:
+            QMessageBox.warning(self, "Aggiornamento", f"Aggiornamento non riuscito: {err}.\n"
+                                "Puoi scaricarlo a mano dalla pagina del progetto.")
+            return
+        self.new_version = None
+        box = QMessageBox(self)
+        box.setWindowTitle("Aggiornamento")
+        box.setIconPixmap(app_icon_pixmap(48))
+        box.setText(f"{APP_NAME} è aggiornata alla versione {self.release['versione']}.")
+        box.setInformativeText("Riavvia l'app per usare la nuova versione.")
+        b_now = box.addButton("Riavvia ora", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Più tardi", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(b_now)
+        box.exec()
+        if box.clickedButton() == b_now and self.close():  # close() chiede prima di salvare le firme in sospeso
+            QProcess.startDetached(f"/usr/bin/{APP_ID}", [])
 
     def settings(self):
         SettingsDialog(self, self.cfg).exec()

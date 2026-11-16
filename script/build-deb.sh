@@ -62,7 +62,7 @@ COPY
 
 # il pacchetto deve funzionare col python di sistema e i soli moduli inclusi: se manca qualcosa, fallisce qui
 PYTHONPATH="$APP/vendor" /usr/bin/python3 -c "import sys; sys.path.insert(0, '$APP')
-import pymupdf, potrace, HersheyFonts, sigla.config, sigla.pdf, generatore, vettorizza"
+import pymupdf, potrace, HersheyFonts, sigla.config, sigla.pdf, sigla.aggiornamenti, generatore, vettorizza"
 
 chmod -R u=rwX,go=rX "$STAGE"
 cat > "$STAGE/DEBIAN/control" <<CTRL

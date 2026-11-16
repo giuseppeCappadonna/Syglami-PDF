@@ -195,6 +195,23 @@ ed.authenticate("pw")
 write_signed(ed, [(0, pymupdf.Rect(100, 100, 250, 150), path, "", 150)], T + "/protetto_firmato.pdf", "pw")
 r = pymupdf.open(T + "/protetto_firmato.pdf")
 assert r.needs_pass and r.authenticate("pw") and r[0].get_drawings()
+# effetto scansione: stesse pagine e formato, solo immagini, difetti diversi a ogni seme, protezione mantenuta
+from sigla.scansione import scansiona
+sc = [pymupdf.open(contratto) for _ in range(3)]
+for d_, seme in zip(sc, (1, 1, 2)):
+    scansiona(d_, seme)
+orig = pymupdf.open(contratto)
+assert len(sc[0]) == len(orig) and sc[0][0].rect == orig[0].rect
+assert not sc[0][0].get_text().strip() and len(sc[0][0].get_images()) == 1
+px = [d_[0].get_pixmap(dpi=40).samples for d_ in sc]
+assert px[0] == px[1] != px[2]
+assert sum(px[0]) > 0.9 * sum(orig[0].get_pixmap(dpi=40).samples)  # non invasivo: la pagina resta chiara
+write_signed(ed, [(0, pymupdf.Rect(100, 100, 250, 150), path, "", 150)], T + "/protetto_scan.pdf", "pw", scan=True)
+r = pymupdf.open(T + "/protetto_scan.pdf")
+assert r.needs_pass and r.authenticate("pw") and r[0].get_images() and not r[0].get_text().strip()
+w.chk_scan.setChecked(True)
+assert load_config()["scansione"] is True
+w.chk_scan.setChecked(False)
 # config danneggiata: copia di sicurezza prima di sovrascriverla
 open(C.CONF_FILE, "w").write("{ non è json")
 load_config()
@@ -353,25 +370,71 @@ app.processEvents()
 assert ab.minimumSize() == ab.maximumSize() and ab.width() >= AboutDialog.WIDTH
 ab.close()
 
-# aggiornamenti: confronto di versioni e risposta di GitHub (finta: i test non usano la rete)
-import io
+# aggiornamenti: ultima release su GitHub, download verificato (finti: i test non usano la rete né installano)
+import hashlib, io, json, subprocess
+import sigla.ui.finestra as F
 assert A.parse_versione("1.10.0") > A.parse_versione("1.9.3") and A.parse_versione("1.2<b>") is None
+REPO, ARCH = A.repo(), A.architettura()
 def finta(risposta):
     A.urllib.request.urlopen = lambda url, timeout: (
         (_ for _ in ()).throw(OSError("senza rete")) if risposta is None else io.BytesIO(risposta.encode()))
     return A.nuova_versione()
-assert finta('{"versione": "99.0.0"}') == "99.0.0"
-assert finta('{"versione": "%s"}' % __version__) is None and finta('{"versione": "0.0.1"}') is None
-assert finta(None) is None and finta("non json") is None and finta("[1]") is None and finta('{"versione": "<b>9"}') is None
+def release(tag, url=None, nome=None, size=1000, digest="sha256:" + "a" * 64):
+    nome = nome or f"{C.APP_ID}_{tag[1:]}_{ARCH}.deb"
+    return json.dumps({"tag_name": tag, "assets": [{"name": nome, "size": size, "digest": digest,
+                       "browser_download_url": url or f"{REPO}/releases/download/{tag}/{nome}"}]})
+r = finta(release("v99.0.0"))
+assert r["versione"] == "99.0.0" and r["pagina"] == REPO + "/releases/latest"
+assert r["deb"]["size"] == 1000 and r["deb"]["sha256"] == "a" * 64 and r["deb"]["url"].startswith(REPO + "/releases/")
+assert finta(release("v99.0.0", url="https://altrove.example/x.deb"))["deb"] is None  # mai file fuori dalla release
+assert finta(release("v99.0.0", nome="altro.deb"))["deb"] is None and finta(release("v99.0.0", size=10**10))["deb"] is None
+assert finta(release("v99.0.0", digest="md5:x"))["deb"]["sha256"] is None
+assert finta(release("v" + __version__)) is None and finta(release("v0.0.1")) is None and finta(release("v<b>9")) is None
+assert finta(None) is None and finta("non json") is None and finta("[1]") is None and finta('{"tag_name": 9}') is None
+# pacchetto finto: download e controlli di dimensione, SHA-256, nome e versione
+pk = T + "/pk"
+os.makedirs(pk + "/DEBIAN")
+open(pk + "/DEBIAN/control", "w").write(f"Package: {C.APP_ID}\nVersion: 99.0.0\nArchitecture: all\n"
+                                        "Maintainer: test <t@example.com>\nDescription: test\n")
+subprocess.run(["dpkg-deb", "--root-owner-group", "--build", pk, T + "/pk.deb"], check=True, capture_output=True)
+dati = open(T + "/pk.deb", "rb").read()
+A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(dati)
+deb = {"url": "x", "size": len(dati), "sha256": hashlib.sha256(dati).hexdigest()}
+visti = []
+p_ = A.scarica(deb, "99.0.0", visti.append)
+assert open(p_, "rb").read() == dati and visti[-1] == len(dati)
+os.remove(p_)
+def rifiutato(deb, versione="99.0.0", progresso=None, errore=ValueError):
+    prima = set(os.listdir(tempfile.gettempdir()))
+    try:
+        A.scarica(deb, versione, progresso)
+    except errore:
+        assert set(os.listdir(tempfile.gettempdir())) <= prima  # niente file lasciati in giro
+        return True
+assert rifiutato(dict(deb, sha256="0" * 64)) and rifiutato(dict(deb, size=len(dati) - 1))
+assert rifiutato(dict(deb, size=len(dati) + 1)) and rifiutato(deb, "98.0.0")
+assert rifiutato(dict(deb, sha256=None), progresso=lambda n: False, errore=InterruptedError)
+A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(b"non sono un pacchetto")
+assert rifiutato({"url": "x", "size": 21, "sha256": None})
+# impostazioni e avviso: dai sorgenti si apre la pagina, dal pacchetto si aggiorna dall'app
 st2 = SettingsDialog(w, w.cfg)
 st2.aggiorna.setChecked(False)
 assert w.cfg["controlla_aggiornamenti"] is False
 st2.aggiorna.setChecked(True)
-w.update_found.emit("99.0.0")
+assert not A.da_pacchetto()
+w.update_found.emit(r)
 app.processEvents()
 assert "99.0.0" in w.toast.text.text() and w.toast.btn.text() == "Scarica" and w.new_version == "99.0.0"
 assert "disponibile la 99.0.0" in " ".join(l.text() for l in AboutDialog(w).findChildren(QLabel))
-w.new_version = None
+F.da_pacchetto = lambda: True
+w.update_found.emit(r)
+app.processEvents()
+assert w.toast.btn.text() == "Aggiorna" and w.toast.action == w.install_update
+w.update_found.emit(dict(r, deb=None))  # release senza pacchetto per questo computer
+app.processEvents()
+assert w.toast.btn.text() == "Scarica"
+F.da_pacchetto = A.da_pacchetto
+w.new_version = w.release = None
 
 # finestra Info: i dati vengono da app.json
 assert __version__ == INFO["versione"]

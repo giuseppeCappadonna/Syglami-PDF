@@ -581,7 +581,8 @@ class SettingsDialog(QDialog):
         self.aggiorna.setChecked(cfg.get("controlla_aggiornamenti", True))
         self.aggiorna.toggled.connect(self.store)
         lay.addWidget(self.aggiorna)
-        lay.addWidget(hint("Legge solo il numero di versione da GitHub: non invia documenti, firme né altri dati."))
+        lay.addWidget(hint("Legge da GitHub il numero dell'ultima versione: non invia documenti, firme né altri dati. "
+                           "Con il pacchetto .deb l'aggiornamento si installa dall'app, dopo la tua conferma e la password."))
 
         # --- le mie firme
         section("Le mie firme")
@@ -867,7 +868,8 @@ class BatchDialog(QDialog):
             src = it.data(Qt.ItemDataRole.UserRole)
             try:
                 dst = src if self.over.isChecked() else output_path(src, copy_suffix(self.cfg))
-                where = sign_file(src, dst, path, caption, self.win.sig_width(), mode, self.ref)
+                where = sign_file(src, dst, path, caption, self.win.sig_width(), mode, self.ref,
+                                  self.cfg.get("scansione", False))
                 it.setIcon(icon("check", "#16a34a"))
                 it.setText(f"{os.path.basename(src)}   →   {os.path.basename(dst)}  ·  {where}")
                 it.setData(Qt.ItemDataRole.UserRole + 1, dst)
@@ -931,7 +933,7 @@ class AboutDialog(QDialog):
         def link(url, testo):
             return f'<a href="{url}" style="color:{ACCENT}; text-decoration:none">{testo}</a>'
         nuova = getattr(parent, "new_version", None)  # trovata all'avvio dal controllo aggiornamenti
-        rows = [("Versione", INFO["versione"] + (f' · {link(gh, f"disponibile la {nuova}")}' if nuova and gh else "")),
+        rows = [("Versione", INFO["versione"] + (f' · {link(gh + "/releases/latest", f"disponibile la {nuova}")}' if nuova and gh else "")),
                 ("Algoritmo firma", f"{alg.get('nome', '')} {alg.get('versione', '')}".strip()),
                 ("Autore", aut.get("nome", "")),
                 ("GitHub", link(gh, gh.removeprefix("https://")) if gh else ""),

@@ -5,6 +5,18 @@ La versione è in `app.json` (`versione`, e `algoritmo_firma.versione` per il ge
 
 ## [Non rilasciato]
 
+## [1.2.0] - 2026-11-16
+### Aggiunto
+- «Effetto scansione» (casella «Al salvataggio» nella colonna Firme, vale anche per la firma in blocco): il PDF salvato
+  sembra stampato, firmato a mano e scansionato. Pagine in grigio, appena storte, con contrasto da scanner, grana, qualche
+  granello e aloni verticali nei margini; i difetti sono casuali e diversi a ogni salvataggio. Il testo non resta selezionabile.
+- Aggiornamento dall'app: con il pacchetto `.deb` il pulsante «Aggiorna» scarica la nuova versione dalla release di
+  GitHub, la verifica (dimensione, SHA-256, nome e versione del pacchetto) e la installa dopo la password, poi propone
+  di riavviare. Avviata dai sorgenti, l'app apre invece la pagina di download e non tocca la cartella.
+### Modificato
+- Il controllo aggiornamenti legge l'ultima release di GitHub (non più `app.json` del ramo main): una versione viene
+  proposta solo quando è pubblicata con il suo pacchetto. «Scarica» e il link nella finestra Info aprono la pagina della release.
+
 ## [1.1.0] - 2026-11-13
 ### Aggiunto
 - Controllo aggiornamenti: all'avvio l'app legge da GitHub il numero dell'ultima versione e, se è più nuova, lo dice con un
