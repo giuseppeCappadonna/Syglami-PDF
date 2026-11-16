@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Sign your PDFs by dragging your signature onto the page.</b><br>
-  Linux desktop app · vector signatures · place and date · batch signing · everything stays local
+  Linux and macOS desktop app · vector signatures · place and date · batch signing · everything stays local
 </p>
 
 <p align="center">
@@ -44,8 +44,18 @@ The interface is in Italian.
   <img src="docs/screenshot-creatore.png" alt="Signature creator" width="640">
 </p>
 
+**Scan effect**
+- Tick **Effetto scansione** (under *Al salvataggio* in the *Firme* column) and the saved PDF looks as if it had been printed, signed by hand and put through an office scanner.
+- Every page becomes a greyscale image at 150 dpi: slightly skewed and shifted, hard scanner contrast, uneven lamp light, sensor grain, a few dust specks and faint vertical streaks that fade out in the margins.
+- The flaws are random and **different at every save**, so two documents never look identical; they stay light and never cover the text.
+- It also applies to **batch signing**, and password-protected PDFs stay protected.
+- Keep in mind: text, links and form fields are gone (the pages are images), and the file grows to roughly 100–250 KB per page. The checkbox is remembered; untick it to go back to normal saving.
+
+<p align="center">
+  <img src="docs/screenshot-scansione.png" alt="The same signed page saved normally (left) and with the scan effect (right)" width="820">
+</p>
+
 **Several documents**
-- **Scan effect** (optional checkbox): the saved PDF looks printed, hand-signed and scanned — greyscale pages, slightly skewed, scanner contrast, grain, a few specks and faint vertical streaks in the margins. The flaws are random, different at every save, and never cover the content. Text is no longer selectable.
 - **Sign several PDFs at once**: automatic position, bottom of the last page, or the same as in the open document; creates `name_firmato.pdf` or overwrites.
 
 **Settings**
