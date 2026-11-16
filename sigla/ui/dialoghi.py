@@ -581,8 +581,6 @@ class SettingsDialog(QDialog):
         self.aggiorna.setChecked(cfg.get("controlla_aggiornamenti", True))
         self.aggiorna.toggled.connect(self.store)
         lay.addWidget(self.aggiorna)
-        lay.addWidget(hint("Legge da GitHub il numero dell'ultima versione: non invia documenti, firme né altri dati. "
-                           "Con il pacchetto .deb l'aggiornamento si installa dall'app, dopo la tua conferma e la password."))
 
         # --- le mie firme
         section("Le mie firme")
