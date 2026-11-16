@@ -69,7 +69,7 @@ The interface is in Italian.
 The easiest way is to download a ready package from the [latest release](https://github.com/giuseppeCappadonna/Syglami-PDF/releases/latest):
 
 - **Ubuntu / Debian**: `syglami-pdf_<version>_amd64.deb` — double-click it, or `sudo apt install ./syglami-pdf_*.deb`. Later versions install themselves from the app (**Update** button).
-- **macOS (Apple Silicon)**: `Syglami-PDF-<version>-macos-arm64.zip` — unzip it and move **Syglami-PDF.app** to *Applications*. The app is not signed by Apple: the first time, macOS blocks it; open *System Settings → Privacy & Security* and click **Open Anyway**. On macOS the app tells you about new versions but you download them by hand.
+- **macOS**: `Syglami-PDF-<version>-macos-arm64.zip` for Apple Silicon (M1 and later), `Syglami-PDF-<version>-macos-x86_64.zip` for Intel Macs — unzip it and move **Syglami-PDF.app** to *Applications*. The app is not signed by Apple: the first time, macOS blocks it; open *System Settings → Privacy & Security* and click **Open Anyway**. On macOS the app tells you about new versions but you download them by hand.
 
 ### From source (Linux)
 
