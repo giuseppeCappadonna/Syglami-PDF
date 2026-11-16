@@ -4,6 +4,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) — versioni [
 La versione è in `app.json` (`versione`, e `algoritmo_firma.versione` per il generatore).
 
 ## [Non rilasciato]
+### Aggiunto
+- App per macOS (Apple Silicon): `script/build-mac.sh` crea `Syglami-PDF.app` con PyInstaller; il workflow GitHub
+  `macos.yml` la costruisce su un Mac, esegue i test e la allega a ogni release. Non è firmata da Apple.
 
 ## [1.2.0] - 2026-11-16
 ### Aggiunto

@@ -371,7 +371,7 @@ assert ab.minimumSize() == ab.maximumSize() and ab.width() >= AboutDialog.WIDTH
 ab.close()
 
 # aggiornamenti: ultima release su GitHub, download verificato (finti: i test non usano la rete né installano)
-import hashlib, io, json, subprocess
+import hashlib, io, json, shutil, subprocess
 import sigla.ui.finestra as F
 assert A.parse_versione("1.10.0") > A.parse_versione("1.9.3") and A.parse_versione("1.2<b>") is None
 REPO, ARCH = A.repo(), A.architettura()
@@ -392,30 +392,31 @@ assert finta(release("v99.0.0", digest="md5:x"))["deb"]["sha256"] is None
 assert finta(release("v" + __version__)) is None and finta(release("v0.0.1")) is None and finta(release("v<b>9")) is None
 assert finta(None) is None and finta("non json") is None and finta("[1]") is None and finta('{"tag_name": 9}') is None
 # pacchetto finto: download e controlli di dimensione, SHA-256, nome e versione
-pk = T + "/pk"
-os.makedirs(pk + "/DEBIAN")
-open(pk + "/DEBIAN/control", "w").write(f"Package: {C.APP_ID}\nVersion: 99.0.0\nArchitecture: all\n"
-                                        "Maintainer: test <t@example.com>\nDescription: test\n")
-subprocess.run(["dpkg-deb", "--root-owner-group", "--build", pk, T + "/pk.deb"], check=True, capture_output=True)
-dati = open(T + "/pk.deb", "rb").read()
-A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(dati)
-deb = {"url": "x", "size": len(dati), "sha256": hashlib.sha256(dati).hexdigest()}
-visti = []
-p_ = A.scarica(deb, "99.0.0", visti.append)
-assert open(p_, "rb").read() == dati and visti[-1] == len(dati)
-os.remove(p_)
-def rifiutato(deb, versione="99.0.0", progresso=None, errore=ValueError):
-    prima = set(os.listdir(tempfile.gettempdir()))
-    try:
-        A.scarica(deb, versione, progresso)
-    except errore:
-        assert set(os.listdir(tempfile.gettempdir())) <= prima  # niente file lasciati in giro
-        return True
-assert rifiutato(dict(deb, sha256="0" * 64)) and rifiutato(dict(deb, size=len(dati) - 1))
-assert rifiutato(dict(deb, size=len(dati) + 1)) and rifiutato(deb, "98.0.0")
-assert rifiutato(dict(deb, sha256=None), progresso=lambda n: False, errore=InterruptedError)
-A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(b"non sono un pacchetto")
-assert rifiutato({"url": "x", "size": 21, "sha256": None})
+if shutil.which("dpkg-deb"):  # solo Linux: su macOS i pacchetti .deb non servono
+    pk = T + "/pk"
+    os.makedirs(pk + "/DEBIAN")
+    open(pk + "/DEBIAN/control", "w").write(f"Package: {C.APP_ID}\nVersion: 99.0.0\nArchitecture: all\n"
+                                            "Maintainer: test <t@example.com>\nDescription: test\n")
+    subprocess.run(["dpkg-deb", "--root-owner-group", "--build", pk, T + "/pk.deb"], check=True, capture_output=True)
+    dati = open(T + "/pk.deb", "rb").read()
+    A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(dati)
+    deb = {"url": "x", "size": len(dati), "sha256": hashlib.sha256(dati).hexdigest()}
+    visti = []
+    p_ = A.scarica(deb, "99.0.0", visti.append)
+    assert open(p_, "rb").read() == dati and visti[-1] == len(dati)
+    os.remove(p_)
+    def rifiutato(deb, versione="99.0.0", progresso=None, errore=ValueError):
+        prima = set(os.listdir(tempfile.gettempdir()))
+        try:
+            A.scarica(deb, versione, progresso)
+        except errore:
+            assert set(os.listdir(tempfile.gettempdir())) <= prima  # niente file lasciati in giro
+            return True
+    assert rifiutato(dict(deb, sha256="0" * 64)) and rifiutato(dict(deb, size=len(dati) - 1))
+    assert rifiutato(dict(deb, size=len(dati) + 1)) and rifiutato(deb, "98.0.0")
+    assert rifiutato(dict(deb, sha256=None), progresso=lambda n: False, errore=InterruptedError)
+    A.urllib.request.urlopen = lambda url, timeout: io.BytesIO(b"non sono un pacchetto")
+    assert rifiutato({"url": "x", "size": 21, "sha256": None})
 # impostazioni e avviso: dai sorgenti si apre la pagina, dal pacchetto si aggiorna dall'app
 st2 = SettingsDialog(w, w.cfg)
 st2.aggiorna.setChecked(False)

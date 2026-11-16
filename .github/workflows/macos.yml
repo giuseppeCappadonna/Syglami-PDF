@@ -1,0 +1,39 @@
+# Costruisce l'app per macOS su un Mac di GitHub e la allega alla release.
+# Parte da solo quando si pubblica una release; si può rilanciare a mano da Actions indicando il tag.
+name: macOS
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag della release a cui allegare l'app (es. v1.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  app:
+    runs-on: macos-14
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # release: il codice del tag; lancio a mano: il ramo scelto (per allegare l'app a una release già uscita)
+          ref: ${{ github.event.release.tag_name || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dipendenze
+        run: python3 -m pip install -r requirements.txt PyQt6 numpy pyinstaller pillow
+      - name: Test
+        run: QT_QPA_PLATFORM=offscreen python3 tests/test_app.py
+      - name: Crea l'app
+        run: script/build-mac.sh
+      - name: Allega alla release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" build/*-macos-*.zip --clobber

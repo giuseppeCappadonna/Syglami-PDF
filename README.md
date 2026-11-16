@@ -66,6 +66,13 @@ The interface is in Italian.
 
 ## Installation
 
+The easiest way is to download a ready package from the [latest release](https://github.com/giuseppeCappadonna/Syglami-PDF/releases/latest):
+
+- **Ubuntu / Debian**: `syglami-pdf_<version>_amd64.deb` — double-click it, or `sudo apt install ./syglami-pdf_*.deb`. Later versions install themselves from the app (**Update** button).
+- **macOS (Apple Silicon)**: `Syglami-PDF-<version>-macos-arm64.zip` — unzip it and move **Syglami-PDF.app** to *Applications*. The app is not signed by Apple: the first time, macOS blocks it; open *System Settings → Privacy & Security* and click **Open Anyway**. On macOS the app tells you about new versions but you download them by hand.
+
+### From source (Linux)
+
 Requirements: Linux with GNOME (tested on Ubuntu 24.04), Python 3.10+, system PyQt6 and NumPy.
 
 1. Download the project from [GitHub](https://github.com/giuseppeCappadonna/Syglami-PDF) with **Code → Download ZIP** and extract it where you want to keep it.
@@ -82,7 +89,7 @@ sudo apt install python3-venv python3-pyqt6 python3-numpy
 
 You can run it again whenever you like, for example after moving the folder.
 
-### Debian package
+### Building the packages
 
 To build a `.deb` (the app plus PyMuPDF, potracer and Hershey-Fonts; PyQt6 and NumPy come from the system):
 
@@ -92,6 +99,8 @@ sudo apt install ./build/syglami-pdf_*.deb
 ```
 
 The package installs the app in `/opt/syglami-pdf`, the `syglami-pdf` command and the launcher. Remove it with `sudo apt remove syglami-pdf`.
+
+The macOS app is built on a Mac with `script/build-mac.sh` (PyInstaller); the `macos.yml` GitHub workflow does it automatically and attaches the zip to every published release.
 
 To start it from a terminal (folder install):
 
